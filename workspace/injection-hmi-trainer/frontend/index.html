@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Injection Molding HMI Trainer – ENGEL‑like (v1.2)</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#111923;
+      --panel-2:#0e141c;
+      --text:#e8eef6;
+      --muted:#a8b3c2;
+      --accent:#27c17b;
+      --accent-2:#19a165;
+      --warn:#ffb020;
+      --danger:#ff5468;
+      --ok:#2ecc71;
+      --grid:#1b2735;
+      --chip:#1a2230;
+      --input:#0f1722;
+      --border:#243243;
+      --shadow:0 10px 30px rgba(0,0,0,.25);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:var(--text); background:linear-gradient(180deg,#0a0f15,#0a121a 45%,#08101a);
+      letter-spacing:.2px;
+    }
+    .app{display:grid; grid-template-columns:300px 1fr; grid-template-rows:64px 1fr; height:100%}
+    header{
+      grid-column:1/3; grid-row:1; display:flex; align-items:center; justify-content:space-between;
+      padding:10px 16px 10px 12px; background:rgba(10,15,22,.7); backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--border);
+    }
+    header .brand{display:flex; align-items:center; gap:12px;}
+    .brand .logo{width:34px; height:34px; border-radius:10px; background:radial-gradient(ellipse at 30% 30%,#3df29a,transparent 55%),linear-gradient(135deg,#27c17b,#0f7e50); box-shadow:0 0 0 2px #134d35 inset}
+    .brand h1{font-size:16px; margin:0; font-weight:700}
+    .brand small{display:block; font-size:11px; color:var(--muted)}
+    header .actions{display:flex; gap:8px; align-items:center}
+    .btn{
+      background:var(--panel); color:var(--text); border:1px solid var(--border);
+      padding:8px 12px; border-radius:10px; cursor:pointer; transition:.15s; box-shadow:var(--shadow);
+    }
+    .btn:hover{transform:translateY(-1px); border-color:#2a3a4f}
+    .btn.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2)); border:none; color:#07130d}
+    .btn.ghost{background:transparent; border:1px dashed var(--border); color:var(--muted)}
+
+    aside{
+      grid-column:1; grid-row:2; border-right:1px solid var(--border);
+      background:linear-gradient(180deg,#0b131c 0%, #0b131c 60%, #0a121b); padding:10px; overflow:auto;
+    }
+    nav{display:flex; flex-direction:column; gap:6px}
+    .nav-item{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; color:var(--muted); cursor:pointer; user-select:none; border:1px solid transparent}
+    .nav-item:hover{background:var(--chip); color:var(--text)}
+    .nav-item.active{background:linear-gradient(180deg,#111d2b,#0e1824); color:var(--text); border-color:#1f2c3f}
+    .nav-item svg{opacity:.9}
+
+    main{
+      grid-column:2; grid-row:2; padding:16px; overflow:auto;
+      display:grid; gap:14px; grid-template-columns:repeat(12,minmax(0,1fr));
+    }
+    .card{
+      background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--border);
+      border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; display:flex; flex-direction:column; gap:12px;
+    }
+    .card h2{margin:2px 0 4px; font-size:15px}
+    .row{display:grid; gap:10px; grid-template-columns:repeat(12,minmax(0,1fr)); align-items:end}
+    .field{display:flex; flex-direction:column; gap:6px}
+    .field label{font-size:12px; color:var(--muted)}
+    .field input[type="number"], .field input[type="text"], .field select{
+      background:var(--input); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 10px; outline:none;
+    }
+    .field input[type="range"]{width:100%}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:var(--chip); color:var(--muted); border:1px solid var(--border); font-size:12px}
+    .badge{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:8px; font-size:12px; background:#122333; border:1px solid #173145}
+    .kpi{display:flex; gap:10px; flex-wrap:wrap}
+    .kpi .tile{background:#0f1622; border:1px solid var(--border); padding:12px 14px; border-radius:12px; min-width:140px}
+    .tile .value{font-size:18px; font-weight:800}
+    .tile .label{font-size:12px; color:var(--muted)}
+    .grid{display:grid; gap:8px; grid-template-columns:repeat(3,1fr)}
+    .note{font-size:12px; color:var(--muted)}
+    .warn{color:var(--warn)} .danger{color:var(--danger)} .ok{color:var(--ok)}
+    .footer-actions{display:flex; gap:8px; justify-content:flex-end}
+    canvas{background:#06101a; border:1px solid var(--border); border-radius:10px}
+
+    /* sections visibility */
+    [data-section]{display:none}
+    [data-section].active{display:block}
+
+    @media (max-width:1100px){
+      .app{grid-template-columns:1fr; grid-template-rows:64px auto 1fr}
+      aside{grid-column:1; grid-row:2}
+      main{grid-column:1; grid-row:3}
+    }
+  </style>
+</head>
+<body>
+  <!-- DISCLAIMER: Educational simulator. Not affiliated with ENGEL. Does NOT control real machines. -->
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>HMI Trainer <small style="font-weight:400">(ENGEL‑like Controller)</small></h1>
+          <small>학습용 가상 컨트롤러 · 실제 장비 제어 아님</small>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="btn-units">단위: <span id="units-label">Metric</span></button>
+        <button class="btn" id="btn-save">레시피 저장</button>
+        <button class="btn" id="btn-load">불러오기</button>
+        <button class="btn primary" id="btn-run">사이클 시작</button>
+      </div>
+    </header>
+
+    <aside>
+      <nav id="nav">
+        <div class="nav-item active" data-target="dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" fill="#27c17b"/></svg>
+          대시보드
+        </div>
+        <div class="nav-item" data-target="materials">재료·단위</div>
+        <div class="nav-item" data-target="temps">온도(배럴/노즐/금형)</div>
+        <div class="nav-item" data-target="fill">사출(충전) 설정</div>
+        <div class="nav-item" data-target="pack">보압 프로파일</div>
+        <div class="nav-item" data-target="metering">계량/디컴프</div>
+        <div class="nav-item" data-target="cool">냉각·이젝트</div>
+        <div class="nav-item" data-target="monitor">모니터링·그래프</div>
+        <div class="nav-item" data-target="alarms">알람·가이드</div>
+        <div class="nav-item" data-target="recipes">레시피 관리</div>
+      </nav>
+    </aside>
+
+    <main id="main">
+      <!-- DASHBOARD -->
+      <section class="card" data-section id="dashboard" style="grid-column:span 12">
+        <h2>대시보드</h2>
+        <div class="kpi">
+          <div class="tile"><div class="value" id="kpi-ct">–</div><div class="label">사이클 타임(s)</div></div>
+          <div class="tile"><div class="value" id="kpi-pmax">–</div><div class="label">최대 사출압(bar)</div></div>
+          <div class="tile"><div class="value" id="kpi-cush">–</div><div class="label">쿠션(mm)</div></div>
+          <div class="tile"><div class="value" id="kpi-weight">–</div><div class="label">샷 중량(g)</div></div>
+          <div class="tile"><div class="value" id="kpi-result">–</div><div class="label">결과(OK/NG)</div></div>
+        </div>
+        <div class="row">
+          <div class="card" style="grid-column:span 6">
+            <h2>작업 요약</h2>
+            <div class="row">
+              <div class="field" style="grid-column:span 4"><label>재질</label><select id="mat">
+                <option value="S1000P">PHA P34HB – S1000P(반결정)</option>
+                <option value="A1000P">PHA P34HB – A1000P(비정질)</option>
+                <option value="PP">PP(참고)</option>
+              </select></div>
+              <div class="field" style="grid-column:span 4"><label>샷 부피(cm³)</label><input type="number" id="shotVol" value="18" min="1" step="0.1"></div>
+              <div class="field" style="grid-column:span 4"><label>사출기 스크류경(mm)</label><input type="number" id="screwDia" value="35" min="18" max="80"></div>
+            </div>
+            <div class="row">
+              <div class="field" style="grid-column:span 4"><label>Projected Area(cm²)</label><input type="number" id="projArea" value="60" min="5"></div>
+              <div class="field" style="grid-column:span 4"><label>형체력(ton)</label><input type="number" id="clampTon" value="120" min="30"></div>
+              <div class="field" style="grid-column:span 4"><label>건조상태</label><select id="dryState"><option value="dry">양호</option><option value="questionable">의심</option><option value="wet">미흡</option></select></div>
+            </div>
+            <div class="note">※ 형체력과 Projected Area로 플래시 리스크를 추정합니다.</div>
+          </div>
+          <div class="card" style="grid-column:span 6">
+            <h2>빠른 실행</h2>
+            <div class="row">
+              <div class="field" style="grid-column:span 6"><label>사출 속도(<span id="lblSpeed">mm/s</span>)</label><input type="range" id="quickSpeed" min="5" max="200" value="60" oninput="document.getElementById('quickSpeedOut').textContent=this.value"><div class="chip">속도 <span id="quickSpeedOut">60</span> <span class="unitSpeed">mm/s</span></div></div>
+              <div class="field" style="grid-column:span 6"><label>V/P 전환 위치(<span id="lblVPunit">mm</span>)</label><input type="range" id="quickVP" min="3" max="25" value="12" oninput="document.getElementById('quickVPOut').textContent=this.value"><div class="chip">전환 <span id="quickVPOut">12</span> <span class="unitLen">mm</span></div></div>
+            </div>
+            <div class="row">
+              <div class="field" style="grid-column:span 6"><label>보압(<span id="lblPack">bar</span>)</label><input type="range" id="quickPack" min="50" max="1000" value="450" oninput="document.getElementById('quickPackOut').textContent=this.value"><div class="chip">보압 <span id="quickPackOut">450</span> <span class="unitPress">bar</span></div></div>
+              <div class="field" style="grid-column:span 6"><label>냉각시간(s)</label><input type="range" id="quickCool" min="4" max="40" value="14" oninput="document.getElementById('quickCoolOut').textContent=this.value"><div class="chip">냉각 <span id="quickCoolOut">14</span> s</div></div>
+            </div>
+            <div class="footer-actions">
+              <button class="btn" id="btn-suggest">조건 추천</button>
+              <button class="btn primary" id="btn-cycle">단일 사이클 실행</button>
+            </div>
+            <div class="note">단위 토글은 **표시 라벨만** 바뀝니다(내부 계산은 Metric 고정).</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MATERIALS & UNITS -->
+      <section class="card" data-section id="materials" style="grid-column:span 12">
+        <h2>재료 & 단위</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>재료</label>
+            <select id="mat2">
+              <option value="S1000P">PHA P34HB – S1000P</option>
+              <option value="A1000P">PHA P34HB – A1000P</option>
+              <option value="PP">PP</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:span 3"><label>단위계</label>
+            <select id="units">
+              <option value="metric">Metric (℃, mm/s, bar)</option>
+              <option value="imperial">Imperial (°F, in/s, psi)</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column:span 3"><label>목표 샷 중량(g)</label><input type="number" id="targetWeight" value="9.2" step="0.01"></div>
+          <div class="field" style="grid-column:span 3"><label>허용 중량 변동(%)</label><input type="number" id="targetVar" value="0.30" step="0.01"></div>
+        </div>
+        <div class="note">표시 단위만 바뀝니다. 수치 자체는 Metric입니다.</div>
+      </section>
+
+      <!-- TEMPERATURES -->
+      <section class="card" data-section id="temps" style="grid-column:span 12">
+        <h2>온도(배럴/노즐/금형)</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 2"><label>T1(℃)</label><input type="number" id="t1" value="160"></div>
+          <div class="field" style="grid-column:span 2"><label>T2(℃)</label><input type="number" id="t2" value="170"></div>
+          <div class="field" style="grid-column:span 2"><label>T3(℃)</label><input type="number" id="t3" value="178"></div>
+          <div class="field" style="grid-column:span 2"><label>T4(℃)</label><input type="number" id="t4" value="180"></div>
+          <div class="field" style="grid-column:span 2"><label>노즐(℃)</label><input type="number" id="tn" value="182"></div>
+          <div class="field" style="grid-column:span 2"><label>금형(℃)</label><input type="number" id="tmold" value="35"></div>
+        </div>
+        <div class="note">PHA는 과열·체류에 민감합니다. 장시간 정지 시 디컴프·퍼지 루틴 권장.</div>
+      </section>
+
+      <!-- FILL SETTINGS -->
+      <section class="card" data-section id="fill" style="grid-column:span 12">
+        <h2>사출(충전) 설정</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>속도1(mm/s)</label><input type="number" id="v1" value="50"></div>
+          <div class="field" style="grid-column:span 3"><label>전환1 위치(mm)</label><input type="number" id="p1" value="18"></div>
+          <div class="field" style="grid-column:span 3"><label>속도2(mm/s)</label><input type="number" id="v2" value="80"></div>
+          <div class="field" style="grid-column:span 3"><label>전환2 위치(mm)</label><input type="number" id="p2" value="10"></div>
+        </div>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>속도3(mm/s)</label><input type="number" id="v3" value="60"></div>
+          <div class="field" style="grid-column:span 3"><label>최종 전환 위치(mm)</label><input type="number" id="p3" value="6"></div>
+          <div class="field" style="grid-column:span 3"><label>V/P 모드</label>
+            <select id="vpMode"><option value="position">Position</option><option value="time">Time</option><option value="pressure">Pressure</option></select>
+          </div>
+          <div class="field" style="grid-column:span 3"><label>V/P 값(Position mm / Time s / Pressure bar)</label><input type="number" id="vpSet" value="12" step="0.1"></div>
+        </div>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>사출 압력 제한(bar)</label><input type="number" id="pLimit" value="1200"></div>
+          <div class="field" style="grid-column:span 3"><label>보압 전환 최소 쿠션(mm)</label><input type="number" id="cushMin" value="3"></div>
+          <div class="field" style="grid-column:span 3"><label>게이트 추정 동결(s)</label><input type="number" id="gateFreeze" value="3.2" step="0.1"></div>
+          <div class="field" style="grid-column:span 3"><label>사출 보정(감압%)</label><input type="number" id="injComp" value="5" min="0" max="20"></div>
+        </div>
+      </section>
+
+      <!-- PACK PROFILE -->
+      <section class="card" data-section id="pack" style="grid-column:span 12">
+        <h2>보압(패킹) 프로파일</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>보압1(bar)</label><input type="number" id="hp1" value="600"></div>
+          <div class="field" style="grid-column:span 3"><label>시간1(s)</label><input type="number" id="ht1" value="2.2" step="0.1"></div>
+          <div class="field" style="grid-column:span 3"><label>보압2(bar)</label><input type="number" id="hp2" value="450"></div>
+          <div class="field" style="grid-column:span 3"><label>시간2(s)</label><input type="number" id="ht2" value="2.0" step="0.1"></div>
+        </div>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>보압3(bar)</label><input type="number" id="hp3" value="320"></div>
+          <div class="field" style="grid-column:span 3"><label>시간3(s)</label><input type="number" id="ht3" value="1.6" step="0.1"></div>
+          <div class="field" style="grid-column:span 3"><label>최소 보압시간(s)</label><input type="number" id="hmin" value="1.5" step="0.1"></div>
+          <div class="field" style="grid-column:span 3"><label>최대 보압시간(s)</label><input type="number" id="hmax" value="7.0" step="0.1"></div>
+        </div>
+        <div class="note">게이트 동결 이전의 보압이 유효합니다.</div>
+      </section>
+
+      <!-- METERING -->
+      <section class="card" data-section id="metering" style="grid-column:span 12">
+        <h2>계량 / 디컴프</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>스크류 RPM</label><input type="number" id="rpm" value="110"></div>
+          <div class="field" style="grid-column:span 3"><label>백프레(bar)</label><input type="number" id="bp" value="80"></div>
+          <div class="field" style="grid-column:span 3"><label>디컴프 전(mm)</label><input type="number" id="decompPre" value="1.0" step="0.1"></div>
+          <div class="field" style="grid-column:span 3"><label>디컴프 후(mm)</label><input type="number" id="decompPost" value="1.5" step="0.1"></div>
+        </div>
+        <div class="note">과도한 RPM/백프레는 전단열·체류와 스플레이에 영향을 줄 수 있습니다.</div>
+      </section>
+
+      <!-- COOLING & EJECT -->
+      <section class="card" data-section id="cool" style="grid-column:span 12">
+        <h2>냉각 · 이젝트</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 3"><label>냉각시간(s)</label><input type="number" id="coolTime" value="14" step="0.1"></div>
+          <div class="field" style="grid-column:span 3"><label>금형 개폐/핸들링(s)</label><input type="number" id="openClose" value="3.2" step="0.1"></div>
+          <div class="field" style="grid-column:span 3"><label>이젝트 스트로크(mm)</label><input type="number" id="ejectStroke" value="8"></div>
+          <div class="field" style="grid-column:span 3"><label>이젝트 속도(mm/s)</label><input type="number" id="ejectSpeed" value="60"></div>
+        </div>
+      </section>
+
+      <!-- MONITOR -->
+      <section class="card" data-section id="monitor" style="grid-column:span 12">
+        <h2>모니터링 / 트렌드</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 8">
+            <canvas id="chart" width="900" height="320" aria-label="Pressure/Velocity Trend"></canvas>
+          </div>
+          <div class="field" style="grid-column:span 4">
+            <label>최근 샷 로그</label>
+            <div id="log" style="height:320px; overflow:auto; border:1px solid var(--border); border-radius:10px; padding:8px; background:#0a1420"></div>
+            <div class="footer-actions" style="margin-top:8px">
+              <button class="btn" id="btn-clear-log">로그 지우기</button>
+              <button class="btn" id="btn-export">CSV 내보내기</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALARMS -->
+      <section class="card" data-section id="alarms" style="grid-column:span 12">
+        <h2>알람 · 가이드</h2>
+        <div id="alarmsList" class="grid"></div>
+        <div class="note">[조건 추천]을 누르면 현재 설정을 바탕으로 안전 영역으로 이동하는 제안을 제공합니다.</div>
+      </section>
+
+      <!-- RECIPES -->
+      <section class="card" data-section id="recipes" style="grid-column:span 12">
+        <h2>레시피 관리</h2>
+        <div class="row">
+          <div class="field" style="grid-column:span 4"><label>레시피 이름</label><input id="recipeName" placeholder="예: P34HB_S1000P_컵본체_v1"></div>
+          <div class="field" style="grid-column:span 8; align-items:flex-end; display:flex; gap:8px">
+            <button class="btn" id="saveRecipe">저장</button>
+            <button class="btn" id="loadRecipe">불러오기</button>
+            <button class="btn" id="deleteRecipe">삭제</button>
+            <select id="recipeList" style="flex:1"></select>
+          </div>
+        </div>
+        <div class="note">브라우저(LocalStorage)에 저장됩니다. 내보내기/가져오기는 CSV 대신 JSON으로 관리 권장.</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    'use strict';
+
+    // ---------- Utilities ----------
+    const $  = (s)=>document.querySelector(s);
+    const $$ = (s)=>document.querySelectorAll(s);
+    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+    const fmt = (n, d=2)=> (isFinite(n)?Number(n).toFixed(d):'–');
+
+    // Unit labels (display only)
+    let metric = true;
+    const unitSpeed = ()=> metric? 'mm/s':'in/s';
+    const unitPress = ()=> metric? 'bar':'psi';
+    const unitLen   = ()=> metric? 'mm':'in';
+
+    function applyUnitLabels(){
+      $('#units-label').textContent = metric? 'Metric':'Imperial';
+      $('#units').value = metric? 'metric':'imperial';
+      $('#lblSpeed').textContent = unitSpeed();
+      $('#lblVPunit').textContent = unitLen();
+      $('#lblPack').textContent = unitPress();
+      $$('.unitSpeed').forEach(el=> el.textContent = unitSpeed());
+      $$('.unitLen').forEach(el=> el.textContent   = unitLen());
+      $$('.unitPress').forEach(el=> el.textContent = unitPress());
+    }
+
+    function syncQuickOutputs(){
+      $('#quickSpeedOut').textContent = $('#quickSpeed').value;
+      $('#quickVPOut').textContent    = $('#quickVP').value;
+      $('#quickPackOut').textContent  = $('#quickPack').value;
+      $('#quickCoolOut').textContent  = $('#quickCool').value;
+      applyUnitLabels();
+    }
+
+    // ---------- Navigation ----------
+    const nav = $('#nav');
+    nav.addEventListener('click', (e)=>{
+      const item = e.target.closest('.nav-item'); if(!item) return;
+      $$('.nav-item').forEach(n=>n.classList.remove('active'));
+      item.classList.add('active');
+      const tgt = item.getAttribute('data-target');
+      // Hide all sections, show target
+      document.querySelectorAll('main [data-section]').forEach(s=>s.classList.remove('active'));
+      const sec = document.getElementById(tgt);
+      if (sec) sec.classList.add('active');
+    });
+    // default visible
+    document.getElementById('dashboard').classList.add('active');
+
+    // ---------- Buttons (header) ----------
+    $('#btn-units').addEventListener('click', ()=>{ metric = !metric; applyUnitLabels(); });
+
+    // Safe LocalStorage
+    function lsSet(k,v){ try{ localStorage.setItem(k,v);}catch(e){ alert('저장 실패: 브라우저 저장소 제한'); } }
+    function lsGet(k){ try{ return localStorage.getItem(k);}catch(e){ return null; } }
+
+    // ---------- Collect settings ----------
+    function getSettings(){
+      const s = {
+        mat: $('#mat').value,
+        shotVol: +$('#shotVol').value,
+        screwDia: +$('#screwDia').value,
+        area: +$('#projArea').value,
+        clampTon: +$('#clampTon').value,
+        dry: $('#dryState').value,
+        temps: {t1:+$('#t1').value,t2:+$('#t2').value,t3:+$('#t3').value,t4:+$('#t4').value,tn:+$('#tn').value,tm:+$('#tmold').value},
+        fill: {v1:+$('#v1').value,p1:+$('#p1').value,v2:+$('#v2').value,p2:+$('#p2').value,v3:+$('#v3').value,p3:+$('#p3').value},
+        vp: {mode: $('#vpMode').value, set: +$('#vpSet').value},
+        limits: {pLimit:+$('#pLimit').value, cushMin:+$('#cushMin').value, gateFreeze:+$('#gateFreeze').value, injComp:+$('#injComp').value},
+        pack: {hp1:+$('#hp1').value,ht1:+$('#ht1').value, hp2:+$('#hp2').value,ht2:+$('#ht2').value, hp3:+$('#hp3').value,ht3:+$('#ht3').value, hmin:+$('#hmin').value, hmax:+$('#hmax').value},
+        meter: {rpm:+$('#rpm').value, bp:+$('#bp').value, dpre:+$('#decompPre').value, dpost:+$('#decompPost').value},
+        cool: {tc:+$('#coolTime').value, open:+$('#openClose').value, ejStroke:+$('#ejectStroke').value, ejSpeed:+$('#ejectSpeed').value},
+        quick: {speed:+$('#quickSpeed').value, vp:+$('#quickVP').value, pack:+$('#quickPack').value, cool:+$('#quickCool').value}
+      };
+      return s;
+    }
+
+    // ---------- Material coefficients (toy model) ----------
+    const MAT = {
+      S1000P: { viscRef: 1.25, tempRef: 175, sensT: -0.012, sensShear: -0.25, dens: 1.24 },
+      A1000P: { viscRef: 1.10, tempRef: 170, sensT: -0.010, sensShear: -0.20, dens: 1.18 },
+      PP    : { viscRef: 0.85, tempRef: 210, sensT: -0.008, sensShear: -0.22, dens: 0.90 },
+    };
+
+    function viscosityIndex(mat, meltT, rpm, bp){
+      const m = MAT[mat];
+      const dvT = (meltT - m.tempRef) * m.sensT;      // hotter -> thinner
+      const dvS = Math.log(1+rpm/120) * m.sensShear;  // faster screw -> slightly thinner
+      const dvBP= Math.log(1+bp/80) * 0.05;          // higher back pressure -> a bit thicker (mixing)
+      return clamp(m.viscRef * (1+dvT+dvS+dvBP), 0.5, 2.0);
+    }
+
+    function clampForce_kN(ton){
+      // rough: 1 ton ≈ 9.81 kN
+      return ton * 9.81;
+    }
+
+    // ---------- Cycle simulation (toy but consistent) ----------
+    function simulate(settings){
+      const s = settings; const m = MAT[s.mat];
+      const meltT = (s.temps.t3 + s.temps.t4 + s.temps.tn)/3;
+      const visc = viscosityIndex(s.mat, meltT, s.meter.rpm, s.meter.bp); // 0.5~2.0
+
+      // Effective fill speeds
+      let v = [s.fill.v1||s.quick.speed, s.fill.v2||s.quick.speed, s.fill.v3||s.quick.speed];
+      let pos = [s.fill.p1|| (s.quick.vp+8), s.fill.p2|| (s.quick.vp+2), s.fill.p3|| s.quick.vp];
+      v = v.map(x=>clamp(x,5,220)); pos = pos.map(x=>clamp(x,3,30));
+
+      // V/P switch handling
+      let vpPoint = s.vp.mode==='position'? s.vp.set : s.quick.vp;
+
+      // Shot geometry & screw displacement estimate
+      const screwArea = Math.PI * Math.pow((s.screwDia/2)/10, 2); // cm²
+      const strokeNeeded = s.shotVol / screwArea; // cm
+      const strokeMM = strokeNeeded * 10; // mm
+
+      // Pressure model
+      const Kbase = 6.5;
+      const speedAvg = (v[0]+v[1]+v[2])/3;
+      const gateCoeff = 1 + (100 / clamp(s.limits.gateFreeze*30, 10, 180)) * 0.02;
+      let Ppeak = (Kbase * visc * (speedAvg/80) * gateCoeff) * 800; // bar scale
+      if(s.dry==='wet') Ppeak *= 1.12; else if(s.dry==='questionable') Ppeak *= 1.06;
+      const Peco = Math.min(Ppeak, s.limits.pLimit * (1 - s.limits.injComp/100));
+
+      // Flash risk via clamp vs cavity pressure
+      const clampK = clampForce_kN(s.clampTon); // kN
+      const area_m2 = s.area / 10000; // m²
+      const cavPressBar = Peco * 0.65;
+      const forceNeeded_kN = cavPressBar * (area_m2*1e5) / 1000; // toy mapping
+      const flashIdx = forceNeeded_kN > clampK ? (forceNeeded_kN-clampK)/clampK : 0;
+
+      // Fill time approx
+      const effSpeed = speedAvg * (1 - (Peco / (s.limits.pLimit*1.6)));
+      const tFill = clamp(strokeMM / clamp(effSpeed,10,240), 0.2, 5.0);
+
+      // Pack effective time (limited by gate freeze)
+      const tPackReq = (s.pack.ht1+s.pack.ht2+s.pack.ht3);
+      const tPack = clamp(Math.min(tPackReq, s.limits.gateFreeze), s.pack.hmin, s.pack.hmax);
+
+      // Cooling & Cycle time
+      const tCool = s.cool.tc;
+      const tCycle = tFill + tPack + tCool + s.cool.open + 0.6;
+
+      // Cushion estimate
+      let cushion = clamp( (strokeMM*0.15) - (tPack*0.4) - (s.pack.hp1/1000), 0.5, 8.0);
+
+      // Weight estimate
+      const dens = m.dens; // g/cm3
+      let weight = s.shotVol * dens * 0.55;
+      weight *= (1 + (s.pack.hp1+s.pack.hp2*0.6+s.pack.hp3*0.3)/5000) * (1 - Math.exp(-tPack/2.2))*0.98;
+      weight *= (1 - cushion/(strokeMM*0.6));
+      const noise = (0.003 + s.meter.rpm/5000 + s.meter.bp/4000) * (s.dry==='wet'?1.8:(s.dry==='questionable'?1.3:1));
+      const weight5 = Array.from({length:5},()=> weight*(1+rnd(-noise,noise)) );
+      const wavg = weight5.reduce((a,b)=>a+b,0)/5;
+      const wvar = (Math.max(...weight5)-Math.min(...weight5))/wavg*100;
+
+      // Result flags
+      const shortShot = (cushion > s.limits.cushMin+2) || (tFill>4.5) || (Peco >= s.limits.pLimit*0.99);
+      const flash = flashIdx>0.08 || (Peco> s.limits.pLimit*0.95 && s.quick.speed>150);
+      const splay = (s.dry!=='dry') || (meltT>185 && s.meter.bp<40) || (s.meter.dpost<1.0);
+      const warp = (tCool<10 && s.temps.tmold>40) || (s.pack.hp1<300);
+      const ok = !shortShot && !flash && !splay && !warp && (wvar <= (+$('#targetVar').value));
+
+      // trend arrays
+      const t = []; const p = []; const vel = [];
+      const N=120; const dt=(tFill+tPack)*0.6/Math.max(1,N-1); let tt=0;
+      for(let i=0;i<N;i++){
+        const phase = i/(N-1);
+        let vnow = (phase<0.33? v[0]: phase<0.66? v[1]: v[2]);
+        if(phase>0.7) vnow *= 1-(phase-0.7)/0.3;
+        let pnow = Math.min(s.limits.pLimit, Peco*(0.5+0.7*phase));
+        if(phase>0.65){ // pack
+          pnow = (s.pack.hp1*0.6 + s.pack.hp2*0.3 + s.pack.hp3*0.1);
+          vnow = vnow*0.25;
+        }
+        t.push(tt); p.push(pnow); vel.push(vnow); tt += dt;
+      }
+
+      return {
+        tCycle:+tCycle.toFixed(2),
+        Pmax:+Peco.toFixed(0),
+        cushion:+cushion.toFixed(2),
+        weight:+wavg.toFixed(2),
+        weight5: weight5.map(x=>+x.toFixed(2)),
+        wvar:+wvar.toFixed(2),
+        flags:{shortShot,flash,splay,warp}, ok,
+        trend:{t,p,vel}
+      };
+    }
+
+    // ---------- Chart drawing ----------
+    const chart = document.getElementById('chart');
+    const ctx = chart.getContext('2d');
+    function drawTrend(tr){
+      ctx.clearRect(0,0,chart.width,chart.height);
+      // grid
+      ctx.strokeStyle = '#123'; ctx.lineWidth=1; ctx.globalAlpha=0.6;
+      for(let x=0;x<=900;x+=90){ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,320); ctx.stroke();}
+      for(let y=0;y<=320;y+=64){ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(900,y); ctx.stroke();}
+      ctx.globalAlpha=1;
+      // axes labels
+      ctx.fillStyle='#9fb1c7'; ctx.font='12px ui-sans-serif'; ctx.fillText('Pressure (bar)', 10, 16); ctx.fillText('Velocity (mm/s)', 10, 32);
+      // scale
+      const Pm = Math.max(1000, Math.max(...tr.p)+200);
+      const Vm = Math.max(200, Math.max(...tr.vel)+40);
+      const mapX = (i)=> i / (tr.t.length-1) * (chart.width-30) + 15;
+      const mapP = (val)=> chart.height - (val/Pm)*280 - 20;
+      const mapV = (val)=> chart.height - (val/Vm)*280 - 20;
+      // pressure
+      ctx.strokeStyle = '#27c17b'; ctx.lineWidth=2.2; ctx.beginPath();
+      tr.p.forEach((v,i)=>{ const x=mapX(i), y=mapP(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y);}); ctx.stroke();
+      // velocity
+      ctx.strokeStyle = '#64b5f6'; ctx.lineWidth=2.0; ctx.beginPath();
+      tr.vel.forEach((v,i)=>{ const x=mapX(i), y=mapV(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y);}); ctx.stroke();
+    }
+
+    // ---------- UI update ----------
+    function updateKPI(r){
+      $('#kpi-ct').textContent = fmt(r.tCycle,2);
+      $('#kpi-pmax').textContent = fmt(r.Pmax,0);
+      $('#kpi-cush').textContent = fmt(r.cushion,2);
+      $('#kpi-weight').textContent = fmt(r.weight,2);
+      $('#kpi-result').innerHTML = r.ok? '<span class="ok">OK</span>' : '<span class="danger">NG</span>';
+    }
+
+    function appendLog(r){
+      const el = document.createElement('div');
+      el.style.padding='6px 6px'; el.style.borderBottom='1px solid #142234';
+      const flags = Object.entries(r.flags).filter(([k,v])=>v).map(([k])=>k).join(', ');
+      el.innerHTML = `<div style="display:flex; gap:10px; flex-wrap:wrap">
+        <span class="badge">CT ${fmt(r.tCycle)}s</span>
+        <span class="badge">Pmax ${fmt(r.Pmax,0)} bar</span>
+        <span class="badge">Cush ${fmt(r.cushion,2)} mm</span>
+        <span class="badge">W ${fmt(r.weight,2)} g (±${fmt(r.wvar,2)}%)</span>
+        <span class="badge">${r.ok? 'OK':'NG'}</span>
+        ${flags? `<span class="badge" style="border-color:#5d2d2d; color:#ff9b9b">${flags}</span>`:''}
+      </div>`;
+      $('#log').prepend(el);
+    }
+
+    function listAlarms(r){
+      const box = document.getElementById('alarmsList'); box.innerHTML='';
+      const items=[];
+      if(r.flags.flash) items.push(['플래시 위험','형체력 대비 공동압력이 높습니다. 속도↓, 압력제한↓, V/P 조기전환, 금형온도↓, 게이트/환기 개선을 검토하세요.', 'danger']);
+      if(r.flags.shortShot) items.push(['숏샷 위험','사출압 제한 또는 전환 과조기. 속도↑, 전환지연, 압력제한↑, 보압/게이트동결 재평가.', 'warn']);
+      if(r.flags.splay) items.push(['스플레이(가스/수분)','건조 재점검, 노즐/전단열 관리, 디컴프 후량↑, 백프레↑(혼련), 퍼지 루틴.', 'warn']);
+      if(r.flags.warp) items.push(['뒤틀림/수축','보압1↑ 또는 시간↑, 냉각시간↑, 금형온도 균일화, 좌우 비대칭 해소.', 'warn']);
+      if(items.length===0) items.push(['정상','특이 알람 없음. 공정창 내부로 판단.', 'ok']);
+      items.forEach(([t,d,lv])=>{
+        const div = document.createElement('div'); div.className='card';
+        div.innerHTML = `<div class="chip ${lv==='danger'?'danger':lv==='ok'?'ok':'warn'}">${t}</div><div class="note">${d}</div>`;
+        box.appendChild(div);
+      });
+    }
+
+    // ---------- CSV export ----------
+    function exportCSV(){
+      const rows = Array.from($('#log').children).map((div)=>[new Date().toISOString(), div.innerText.replace(/\n/g,' ').trim()]);
+      const csv = ['timestamp,summary', ...rows.map(r=>r.map(x=>'"'+x.replace(/"/g,'""')+'"').join(','))].join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='shots_log.csv'; a.click();
+    }
+
+    // ---------- Recipes (LocalStorage) ----------
+    function readAllInputs(){
+      const all={}; document.querySelectorAll('input, select').forEach(el=>{ if(!el.id) return; all[el.id]= (el.type==='number'||el.type==='range')? +el.value : el.value; }); return all;
+    }
+    function writeAllInputs(obj){
+      Object.entries(obj).forEach(([id,val])=>{ const el=document.getElementById(id); if(!el) return; el.value=val; });
+      // keep paired material selects in sync & slider chips refreshed
+      $('#mat2').value = $('#mat').value;
+      syncQuickOutputs();
+    }
+
+    function saveRecipe(name){
+      lsSet('HMI_'+name, JSON.stringify(readAllInputs()));
+      refreshRecipeList();
+    }
+    function loadRecipe(name){
+      const j = lsGet('HMI_'+name); if(!j) return alert('레시피가 없습니다.');
+      writeAllInputs(JSON.parse(j));
+      alert('불러옴: '+name);
+    }
+    function deleteRecipe(name){ localStorage.removeItem('HMI_'+name); refreshRecipeList(); }
+    function refreshRecipeList(){
+      const sel=$('#recipeList'); sel.innerHTML='';
+      Object.keys(localStorage).filter(k=>k.startsWith('HMI_')).sort().forEach(k=>{
+        const opt=document.createElement('option'); opt.value=k.slice(4); opt.textContent=k.slice(4); sel.appendChild(opt);
+      });
+    }
+
+    // ---------- Suggestions ----------
+    function suggest(){
+      const s=getSettings(); const tips=[];
+      if(+s.limits.pLimit>1100) tips.push('압력 제한을 900~1100 bar로 낮춰 플래시 위험을 줄이세요.');
+      if(+s.quick.speed>140) tips.push('사출 속도를 90~130 mm/s 범위로 낮춰 보세요.');
+      if(s.vp.mode==='position' && +s.vp.set<8) tips.push('V/P 전환 위치를 10~14 mm로 늦춰 충전 부족을 방지하세요.');
+      if(s.dry!=='dry') tips.push('건조 상태를 양호로 맞추고 노즐 온도를 175~185℃ 범위에 설정하세요.');
+      if(+s.cool.tc<12) tips.push('냉각시간을 최소 12 s 이상으로 늘려 뒤틀림을 줄이세요.');
+      alert(tips.length? ('조건 추천 (요약):\n- '+tips.join('\n- ')) : '현재 설정은 무난합니다. 소폭 조정으로 최적점을 찾으세요.');
+    }
+
+    // ---------- Default recipes (auto seed once) ----------
+    function seedDefaults(){
+      if(!lsGet('HMI_P34HB_S1000P_base')){
+        const baseCommon = {
+          shotVol: 18, screwDia: 35, projArea: 60, clampTon: 120,
+          targetWeight: 9.2, targetVar: 0.30, dryState: "dry",
+          vpMode: "position", cushMin: 3, injComp: 5, openClose: 3.2, ejectStroke: 8, ejectSpeed: 60,
+          quickSpeed:60, quickVP:12, quickPack:450, quickCool:14
+        };
+        const S1000P = Object.assign({}, baseCommon, {
+          mat: "S1000P",
+          t1:160, t2:170, t3:178, t4:180, tn:182, tmold:35,
+          v1:50, p1:18, v2:80, p2:10, v3:60, p3:6,
+          vpSet:12, pLimit:1100, gateFreeze:3.0,
+          hp1:600, ht1:2.2, hp2:450, ht2:2.0, hp3:320, ht3:1.6, hmin:1.5, hmax:7.0,
+          rpm:100, bp:80, decompPre:1.0, decompPost:1.5,
+          coolTime:14
+        });
+        const A1000P = Object.assign({}, baseCommon, {
+          mat: "A1000P",
+          t1:158, t2:168, t3:172, t4:174, tn:176, tmold:25,
+          v1:45, p1:18, v2:70, p2:10, v3:55, p3:6,
+          vpSet:11, pLimit:1000, gateFreeze:2.8,
+          hp1:500, ht1:1.8, hp2:380, ht2:1.6, hp3:280, ht3:1.2, hmin:1.5, hmax:7.0,
+          rpm:90, bp:60, decompPre:1.0, decompPost:1.8,
+          coolTime:16
+        });
+        lsSet('HMI_P34HB_S1000P_base', JSON.stringify(S1000P));
+        lsSet('HMI_P34HB_A1000P_base', JSON.stringify(A1000P));
+      }
+    }
+
+    // ---------- Buttons wiring ----------
+    $('#btn-cycle').addEventListener('click', ()=>{
+      const res = simulate( getSettings() );
+      updateKPI(res); drawTrend(res.trend); appendLog(res); listAlarms(res);
+    });
+    $('#btn-suggest').addEventListener('click', suggest);
+    $('#btn-run').addEventListener('click', ()=>{
+      const res = simulate( getSettings() ); updateKPI(res); drawTrend(res.trend); appendLog(res); listAlarms(res);
+    });
+    $('#btn-clear-log').addEventListener('click', ()=> $('#log').innerHTML='');
+    $('#btn-export').addEventListener('click', exportCSV);
+
+    // Save/Load (header)
+    $('#btn-save').addEventListener('click', ()=>{
+      const name = prompt('레시피 이름을 입력하세요'); if(!name) return; saveRecipe(name); alert('저장됨: '+name);
+    });
+    $('#btn-load').addEventListener('click', ()=>{
+      refreshRecipeList();
+      const name = prompt('불러올 레시피 이름을 입력하거나, [레시피 관리] 탭에서 선택하세요.'); if(!name) return; loadRecipe(name);
+    });
+
+    // Recipes tab
+    $('#saveRecipe').addEventListener('click', ()=>{ const n=$('#recipeName').value.trim(); if(!n) return alert('이름을 입력하세요'); saveRecipe(n); alert('저장됨: '+n); });
+    $('#loadRecipe').addEventListener('click', ()=>{ const n=$('#recipeList').value; if(!n) return; loadRecipe(n); });
+    $('#deleteRecipe').addEventListener('click', ()=>{ const n=$('#recipeList').value; if(!n) return; if(confirm('삭제할까요? '+n)) deleteRecipe(n); });
+
+    // Material selects sync
+    $('#mat2').addEventListener('change', e=>{ $('#mat').value=e.target.value; });
+    $('#mat').addEventListener('change', e=>{ $('#mat2').value=e.target.value; });
+
+    // ---------- Init ----------
+    (function init(){
+      seedDefaults();
+      refreshRecipeList();
+      syncQuickOutputs();
+      applyUnitLabels();
+      const res = simulate( getSettings() ); // initial visualization
+      updateKPI(res); drawTrend(res.trend); listAlarms(res);
+      // ensure dashboard visible
+      document.getElementById('dashboard').classList.add('active');
+    })();
+  </script>
+</body>
+</html>
